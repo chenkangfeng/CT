@@ -25,8 +25,11 @@ public:
     addr_info(sockaddr* addr, socklen_t len);
     virtual ~addr_info(void);
     
-    sa_family_t family(void);
-    ct_strptr ip(void);
+    const sockaddr& addr(void) const;
+    socklen_t addr_len(void) const;
+    sa_family_t family(void) const;
+    ct_strptr ip(void) const;
+    void set_port(in_port_t port);
 private:
     addr_type info_;
     ct_char ip_[128];

@@ -31,14 +31,39 @@ addr_info::~addr_info(void)
 {
 }
 
-sa_family_t addr_info::family(void)
+const sockaddr& addr_info::addr(void) const
+{
+    return info_.generic;
+}
+
+socklen_t addr_info::addr_len(void) const
+{
+    socklen_t ret = 0;
+    if(family() == AF_INET){
+        ret = sizeof(info_.ipv4);
+    }else if(family() == AF_INET6){
+        ret = sizeof(info_.ipv6);
+    }
+    return ret;
+}
+
+sa_family_t addr_info::family(void) const
 {
     return info_.generic.sa_family;
 }
 
-ct_strptr addr_info::ip(void)
+ct_strptr addr_info::ip(void) const
 {
     return ip_;
+}
+
+void addr_info::set_port(in_port_t port)
+{
+    if(family() == AF_INET){
+        info_.ipv4.sin_port = htons(port);
+    }else if(family() == AF_INET6){
+        info_.ipv6.sin6_port = htons(port);
+    }
 }
 
 address::address(void)

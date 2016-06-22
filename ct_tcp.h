@@ -7,7 +7,11 @@
 
 #include "ct_macro.h"
 #include "ct_type.h"
+#include "ct_platform.h"
 #include "event.h"
+#include "listener.h"
+
+#include "ct_dns.h"
 
 ct_namespace_begin
 
@@ -17,8 +21,14 @@ public:
     tcp(void);
     virtual ~tcp(void);
     
-    bool listen(ct_strptr domain, in_port_t port);
-    bool connect(ct_strptr domain, in_port_t port);
+    ct_bool listen(const addr_info& addr);
+    ct_bool connect(const addr_info& addr);
+private:
+    event_config* ev_config_;
+    event_base* ev_base_;
+    evconnlistener* ev_listener_;
+    
+    dns dns_;
 };
 
 ct_namespace_end
