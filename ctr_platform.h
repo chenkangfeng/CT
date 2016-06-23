@@ -14,14 +14,14 @@
 
 #define ctr_target_platform ctr_platform_unknown
 
-#if defined(CC_TARGET_OS_MAC) || defined(__APPLE__)
-#undef  ctr_target_platform
-#define ctr_target_platform ctr_platform_mac
-#endif
-
 #if defined(CC_TARGET_OS_IPHONE)
 #undef  ctr_target_platform
 #define ctr_target_platform ctr_platform_ios
+#endif
+
+#if defined(CC_TARGET_OS_MAC) || defined(__APPLE__)
+#undef  ctr_target_platform
+#define ctr_target_platform ctr_platform_mac
 #endif
 
 #if defined(ANDROID)
@@ -40,7 +40,7 @@
 #endif
 
 #if ctr_target_platform == ctr_platform_unknown
-#error "cannot recognize the target platform"
+#error "unknown platform"
 #endif
 
 #endif // _ctr_platform_h_
