@@ -8,7 +8,7 @@
 #include "ctr_macro.h"
 #include "ctr_type.h"
 #include "evdns.h"
-#include <vectror>
+#include <vector>
 
 ctr_namespace_begin
 
@@ -45,7 +45,7 @@ public:
     ctr_int32 size(void);
     addr_info& operator[](ctr_int32 index);
 private:
-    std::vectror<addr_info> addr_vec_;
+    std::vector<addr_info> addr_vec_;
 };
 
 ctr_namespace_end

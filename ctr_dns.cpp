@@ -42,7 +42,7 @@ ctr_bool dns::parse(ctr_strptr domain, address& addr)
     return ret;
 }
 
-void dns::set_timeout(const timeval& time, const functrion<void(void)>& callback)
+void dns::set_timeout(const timeval& time, const function<void(void)>& callback)
 {
     memcpy(&time_, &time, sizeof(time));
     timeout_callback_ = callback;
@@ -66,7 +66,7 @@ static void dns_working(event_base* ev_base)
     event_base_dispatch(ev_base);
 }
 
-ctr_bool dns::asyn_parse(ctr_strptr domain, const functrion<void(address&)>& callback)
+ctr_bool dns::asyn_parse(ctr_strptr domain, const function<void(address&)>& callback)
 {
     if(is_working_){
         return false;
