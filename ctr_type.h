@@ -16,7 +16,7 @@ typedef long long          ctr_int64;
 typedef unsigned long long ctr_uint64;
 typedef float              ctr_float32;
 typedef double             ctr_float64;
-typedef signed long        ctr_long;
+typedef long               ctr_long;
 typedef unsigned long      ctr_ulong;
 typedef const char*        ctr_strptr;
 
