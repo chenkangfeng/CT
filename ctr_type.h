@@ -1,9 +1,10 @@
 //
-//  ctr_type.h 2016-6-21
+//  ctr_type.h 2016-07-02
+//  类型定义
 //
 
-#ifndef _ctr_type_h_
-#define _ctr_type_h_
+#ifndef _CTR_TYPE_H_
+#define _CTR_TYPE_H_
 
 typedef bool               ctr_bool;
 typedef char               ctr_int8;
@@ -22,5 +23,6 @@ typedef const char*        ctr_strptr;
 
 typedef ctr_int8           ctr_char;
 typedef ctr_uint8          ctr_byte;
+typedef ctr_ulong          ctr_intptr;
 
-#endif // _ctr_type_h_
+#endif // _CTR_TYPE_H_

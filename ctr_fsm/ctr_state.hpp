@@ -1,69 +1,57 @@
 //
-//  ctr_state.hpp 16-06-29
+//  ctr_state.hpp 16-07-02
+//  状态
 //
 
-#ifndef _ctr_state_hpp_
-#define _ctr_state_hpp_
+#ifndef _CTR_STATE_HPP_
+#define _CTR_STATE_HPP_
 
 #include "ctr_macro.h"
 #include "ctr_type.h"
-#include <functional>
 #include <typeinfo>
+#include <functional>
 
-#define state_transition(state1, state2) \
-public:                                  \
-typedef state1 from_type;                \
-typedef state2 to_type;
+CTR_NAMESPACE_BEGIN
 
-ctr_namespace_begin
+class state_event;
 
-class state_machine;
-class state_empty;
-
-class state_event
-{
-public:
-    state_transition(state_empty, state_empty)
-    
-    virtual ~state_event(void){}
-};
-
+// 状态基类
 class state_base
 {
 public:
     virtual ~state_base(void){}
     
-    virtual ctr_bool enter(void){return true;}
-    virtual ctr_bool exit(void){return true;}
-    virtual ctr_bool update(ctr_float32){return true;}
+    // 进入状态
+    virtual void enter(void){}
+    // 退出状态
+    virtual void exit(void){}
+    // 更新状态
+    virtual void update(ctr_float32){}
+    // 状态事件
     ctr_bool event(state_event&){return true;}
 };
 
+// 状态类型
 class state_type
 {
 public:
+    // 判断状态是否相同
     template<typename type>
-    static ctr_bool is_equal(const state_base& state);
+    static ctr_bool is_equal(const state_base& state)
+    {return typeid(type) == typeid(state);}
+    // 判断状态是否相同
     template<typename type1, typename type2>
-    static ctr_bool is_equal(void);
+    static ctr_bool is_equal(void)
+    {return typeid(type1) == typeid(type2);}
+    // 判断状态是否相同
     static ctr_bool is_equal(const state_base& state1, const state_base& state2)
-    {
-        return typeid(state1) == typeid(state2);
-    }
+    {return typeid(state1) == typeid(state2);}
 };
 
-template<typename type>
-ctr_bool state_type::is_equal(const state_base& state)
-{
-    return typeid(type) == typeid(state);
-}
-template<typename type1, typename type2>
-ctr_bool state_type::is_equal(void)
-{
-    return typeid(type1) == typeid(type2);
-}
+class state_nil;
 
-template<typename super = state_empty, typename entry = state_empty>
+// 状态类
+template<typename super = state_nil, typename entry = state_nil>
 class state : public state_base
 {
     friend class state_machine;
@@ -74,44 +62,67 @@ public:
     state(void):super_state_(NULL){}
     virtual ~state(void){}
 
+    // 获取状态指针
     template<typename type>
     type* state_ptr(void)
     {
         type* ret = NULL;
-        if(super_state_ != NULL){
-            if(state_type::is_equal<type>(*this)){
-                ret = dynamic_cast<type*>(this);
-            }else{
-                ret = super_state_->template state_ptr<type>();
-            }
+        if(state_type::is_equal<type>(*this)){
+            ret = dynamic_cast<type*>(this);
+        }else{
+            ret = super_state_->template state_ptr<type>();
         }
         return ret;
     }
 protected:
+    // 父状态指针
     super* super_state_;
 };
 
-class state_empty : public state<>{};
+// 空状态
+class state_nil : public state<>{};
 
-template<typename self, typename super = state_empty, typename entry = state_empty>
+// 扩展状态类
+template<typename self, typename super = state_nil, typename entry = state_nil>
 class state_ex : public state<super, entry>
 {
 public:
-    typedef std::function<ctr_bool(self&)> enter_func_type;
-    typedef std::function<ctr_bool(self&)> exit_func_type;
-    typedef std::function<ctr_bool(self&, ctr_float32)> update_func_type;
+    typedef std::function<void(self&)> enter_func_type;
+    typedef std::function<void(self&)> exit_func_type;
+    typedef std::function<void(self&, ctr_float32)> update_func_type;
     
     typedef super super_type;
     typedef entry entry_type;
     
     virtual ~state_ex(void){}
     
-    virtual ctr_bool enter(void);
-    virtual ctr_bool exit(void);
-    virtual ctr_bool update(ctr_float32 dt);
+    // 进入状态
+    virtual void enter(void)
+    {
+        if(enter_func){
+            enter_func(*dynamic_cast<self*>(this));
+        }
+    }
+    // 退出状态
+    virtual void exit(void)
+    {
+        if(exit_func){
+            exit_func(*dynamic_cast<self*>(this));
+        }
+    }
+    // 更新状态
+    virtual void update(ctr_float32 dt)
+    {
+        if(update_func){
+            update_func(*dynamic_cast<self*>(this), dt);
+        }
+    }
     
+    // 进入状态函数
     static enter_func_type enter_func;
+    // 退出状态函数
     static exit_func_type exit_func;
+    // 更新状态函数
     static update_func_type update_func;
 };
 
@@ -122,34 +133,6 @@ typename state_ex<self, super, entry>::exit_func_type state_ex<self, super, entr
 template<typename self, typename super, typename entry>
 typename state_ex<self, super, entry>::update_func_type state_ex<self, super, entry>::update_func = update_func_type();
 
-template<typename self, typename super, typename entry>
-ctr_bool state_ex<self, super, entry>::enter(void)
-{
-    ctr_bool ret = true;
-    if(enter_func){
-        ret = enter_func(*dynamic_cast<self*>(this));
-    }
-    return ret;
-};
-template<typename self, typename super, typename entry>
-ctr_bool state_ex<self, super, entry>::exit(void)
-{
-    ctr_bool ret = true;
-    if(exit_func){
-        ret = exit_func(*dynamic_cast<self*>(this));
-    }
-    return ret;
-};
-template<typename self, typename super, typename entry>
-ctr_bool state_ex<self, super, entry>::update(ctr_float32 dt)
-{
-    ctr_bool ret = true;
-    if(update_func){
-        ret = update_func(*dynamic_cast<self*>(this), dt);
-    }
-    return ret;
-};
+CTR_NAMESPACE_END
 
-ctr_namespace_end
-
-#endif // _ctr_state_hpp_
+#endif // _CTR_STATE_HPP_
