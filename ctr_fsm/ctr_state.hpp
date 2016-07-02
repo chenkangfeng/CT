@@ -91,9 +91,6 @@ public:
     typedef std::function<void(self&)> exit_func_type;
     typedef std::function<void(self&, ctr_float32)> update_func_type;
     
-    typedef super super_type;
-    typedef entry entry_type;
-    
     virtual ~state_ex(void){}
     
     // 进入状态
