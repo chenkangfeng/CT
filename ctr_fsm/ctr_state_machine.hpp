@@ -16,6 +16,7 @@
 
 CTR_NAMESPACE_BEGIN
 
+// 状态机
 class state_machine
 {
 public:
