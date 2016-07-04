@@ -28,23 +28,19 @@ public:
     template<typename entry>
     void start(void)
     {
-        mutex_.lock();
         if(state_list_.empty()){
             if(state_type::is_equal<typename entry::super_type, state_nil>()){
                 _alloc_state<entry>();
             }
         }
-        mutex_.unlock();
     }
     // 更新状态机
     void update(ctr_float32 dt)
     {
-        mutex_.lock();
         for(auto itor = state_list_.begin();
             itor != state_list_.end(); ++itor){
             (*itor)->update(dt);
         }
-        mutex_.unlock();
     }
     // 判断状态的当前状态
     template<typename type>
@@ -55,7 +51,6 @@ public:
     ctr_bool send_event(event& ev)
     {
         ctr_bool ret = false;
-        mutex_.lock();
         typename event::state1_type* state1 = _get_state<typename event::state1_type>();
         if(state1 != NULL){
             if(state_event_type::is_refresh<event>()){
@@ -70,7 +65,6 @@ public:
                 }
             }
         }
-        mutex_.unlock();
         return ret;
     }
 private:
@@ -125,8 +119,6 @@ private:
     
     // 状态列表
     std::list<state_base*> state_list_;
-    // 状态锁
-    std::mutex mutex_;
 };
 
 CTR_NAMESPACE_END
