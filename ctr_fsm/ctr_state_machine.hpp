@@ -22,7 +22,11 @@ class state_machine
 public:
     state_machine(void){}
     virtual ~state_machine(void)
-    {_delete_state<state_nil>();}
+    {
+        mutex_.lock();
+        _delete_state<state_nil>();
+        mutex_.unlock();
+    }
     
     // 开启状态机
     template<typename entry>
@@ -30,7 +34,9 @@ public:
     {
         if(state_list_.empty()){
             if(state_type::is_equal<typename entry::super_type, state_nil>()){
+                mutex_.lock();
                 _alloc_state<entry>();
+                mutex_.unlock();
             }
         }
     }
@@ -58,10 +64,13 @@ public:
             }else if(state_event_type::is_transition<event>() &&
                      state_type::is_equal<typename event::state1_type::super_type, typename event::state2_type::super_type>()){
                 if(state1->event(ev)){
-                    _delete_state<typename event::state1_type>();
-                    _alloc_state<typename event::state2_type>();
-                    typename event::state2_type* state2 = _get_state<typename event::state2_type>();
-                    ret = (state2 != NULL && state2->event(ev));
+                    if(mutex_.try_lock()){
+                        _delete_state<typename event::state1_type>();
+                        _alloc_state<typename event::state2_type>();
+                        mutex_.unlock();
+                        typename event::state2_type* state2 = _get_state<typename event::state2_type>();
+                        ret = (state2 != NULL && state2->event(ev));
+                    }
                 }
             }
         }
@@ -119,6 +128,8 @@ private:
     
     // 状态列表
     std::list<state_base*> state_list_;
+    // 状态锁
+    std::mutex mutex_;
 };
 
 CTR_NAMESPACE_END
