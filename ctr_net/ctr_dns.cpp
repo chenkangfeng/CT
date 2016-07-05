@@ -38,12 +38,6 @@ dns::dns(void)
     machine_.send_event(ev);
 }
 
-static void dns_asyn_working(state_machine& machine)
-{
-    dns_asyn_parse_start ev;
-    machine.send_event(ev);
-}
-
 dns::~dns(void)
 {
     if(thread_.joinable()){
@@ -68,6 +62,12 @@ void dns::set_timeout(const timeval& time, const function<void(void)>& callback)
     dns_set_timeout ev(callback);
     ev.time = time;
     machine_.send_event(ev);
+}
+
+static void dns_asyn_working(state_machine& machine)
+{
+    dns_asyn_parse_start ev;
+    machine.send_event(ev);
 }
 
 ctr_bool dns::asyn_parse(ctr_strptr domain, const function<void(address&)>& callback)
