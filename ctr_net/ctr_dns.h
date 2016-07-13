@@ -31,10 +31,7 @@ public:
 private:
     // 异步解析状态机
     state_machine machine_;
-    // 异步解析线程
-    std::thread thread_;
 };
-
 
 class dns_asyn;
 class dns_asyn_wait;
@@ -75,10 +72,10 @@ public:
 class dns_asyn_parse_start : public state_transition<dns_asyn_work_ready, dns_asyn_work_doing>{};
 
 // DNS异步解析超时事件
-class dns_asyn_parse_timeout : public state_transition<dns_asyn_work_doing, dns_asyn_work_ready>{};
+class dns_asyn_parse_timeout : public state_refresh<dns_asyn_work_doing>{};
 
 // DNS异步解析成功事件
-class dns_asyn_parse_succeed : public state_transition<dns_asyn_work_doing, dns_asyn_work_ready>
+class dns_asyn_parse_succeed : public state_refresh<dns_asyn_work_doing>
 {
 public:
     ctr_int32 error;
@@ -86,9 +83,11 @@ public:
 };
 
 // DNS异步解析基状态
-class dns_asyn : public state<state_nil, dns_asyn_wait>
+class dns_asyn : public state<dns_asyn, state_nil>
 {
 public:
+    state_entry(dns_asyn_wait);
+    
     dns_asyn(void);
     
     ctr_bool event(dns_asyn_init& ev);
@@ -101,12 +100,14 @@ public:
 };
 
 // DNS异步解析等待状态
-class dns_asyn_wait : public state<dns_asyn>{};
+class dns_asyn_wait : public state<dns_asyn_wait, dns_asyn>{};
 
 // DNS异步解析工作状态
-class dns_asyn_work : public state<dns_asyn, dns_asyn_work_ready>
+class dns_asyn_work : public state<dns_asyn_work, dns_asyn>
 {
 public:
+    state_entry(dns_asyn_work_ready);
+    
     virtual void enter(void);
     virtual void exit(void);
     
@@ -120,20 +121,21 @@ public:
 };
 
 // DNS异步解析装备状态
-class dns_asyn_work_ready : public state<dns_asyn_work>
-{
-public:
-    ctr_bool event(state_event& ev);
-    ctr_bool event(dns_asyn_parse_timeout& ev);
-    ctr_bool event(dns_asyn_parse_succeed& ev);
-};
+class dns_asyn_work_ready : public state<dns_asyn_work_ready, dns_asyn_work>{};
 
 // DNS异步解析执行状态
-class dns_asyn_work_doing : public state<dns_asyn_work>
+class dns_asyn_work_doing : public state<dns_asyn_work_doing, dns_asyn_work>
 {
 public:
-    ctr_bool event(state_event& ev);
+    state_next(dns_asyn_work_ready);
+    
+    virtual void exit(void);
+    
     ctr_bool event(dns_asyn_parse_start& ev);
+    ctr_bool event(dns_asyn_parse_timeout& ev);
+    ctr_bool event(dns_asyn_parse_succeed& ev);
+    
+    std::thread thread_;
 };
 
 CTR_NAMESPACE_END

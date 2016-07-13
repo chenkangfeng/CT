@@ -40,9 +40,6 @@ dns::dns(void)
 
 dns::~dns(void)
 {
-    if(thread_.joinable()){
-        thread_.join();
-    }
 }
 
 ctr_bool dns::parse(ctr_strptr domain, address& addr)
@@ -64,19 +61,14 @@ void dns::set_timeout(const timeval& time, const function<void(void)>& callback)
     machine_.send_event(ev);
 }
 
-static void dns_asyn_working(state_machine& machine)
-{
-    dns_asyn_parse_start ev;
-    machine.send_event(ev);
-}
-
 ctr_bool dns::asyn_parse(ctr_strptr domain, const function<void(address&)>& callback)
 {
     ctr_bool ret = false;
     dns_asyn_parse_ready ev(callback);
     ev.domain = domain;
     if((ret = machine_.send_event(ev))){
-        thread_ = thread(dns_asyn_working, ref(machine_));
+        dns_asyn_parse_start ev;
+        machine_.send_event(ev);
     }
     return ret;
 }
@@ -109,17 +101,6 @@ static void dns_timeout(evutil_socket_t, ctr_int16, void* param)
     }
 }
 
-static void dns_callback(ctr_int32 error, evutil_addrinfo* result, void* param)
-{
-    if(param != NULL){
-        state_machine* machine = (state_machine*)param;
-        dns_asyn_parse_succeed ev;
-        ev.error = error;
-        ev.result = result;
-        machine->send_event(ev);
-    }
-}
-
 void dns_asyn_work::enter(void)
 {
     ev_base = event_base_new();
@@ -132,6 +113,17 @@ void dns_asyn_work::exit(void)
     event_free(ev);
     evdns_base_free(ev_dns_base, 1);
     event_base_free(ev_base);
+}
+
+static void dns_callback(ctr_int32 error, evutil_addrinfo* result, void* param)
+{
+    if(param != NULL){
+        state_machine* machine = (state_machine*)param;
+        dns_asyn_parse_succeed ev;
+        ev.error = error;
+        ev.result = result;
+        machine->send_event(ev);
+    }
 }
 
 ctr_bool dns_asyn_work::event(dns_asyn_parse_ready& ev)
@@ -149,25 +141,37 @@ ctr_bool dns_asyn_work::event(dns_asyn_parse_ready& ev)
     return ret;
 }
 
-ctr_bool dns_asyn_work_ready::event(state_event& ev)
+static void dns_asyn_working(event_base* ev_base)
 {
+    event_base_dispatch(ev_base);
+}
+
+void dns_asyn_work_doing::exit(void)
+{
+    if(thread_.joinable()){
+        thread_.join();
+    }
+    finish();
+}
+
+ctr_bool dns_asyn_work_doing::event(dns_asyn_parse_start& ev)
+{
+    thread_ = thread(dns_asyn_working, state_ptr<dns_asyn_work>()->ev_base);
     return true;
 }
 
-ctr_bool dns_asyn_work_ready::event(dns_asyn_parse_timeout& ev)
+ctr_bool dns_asyn_work_doing::event(dns_asyn_parse_timeout& ev)
 {
     event_base_loopexit(state_ptr<dns_asyn_work>()->ev_base, NULL);
-    
     if(state_ptr<dns_asyn>()->timeout_callback){
         state_ptr<dns_asyn>()->timeout_callback();
     }
     return true;
 }
 
-ctr_bool dns_asyn_work_ready::event(dns_asyn_parse_succeed& ev)
+ctr_bool dns_asyn_work_doing::event(dns_asyn_parse_succeed& ev)
 {
     event_base_loopexit(state_ptr<dns_asyn_work>()->ev_base, NULL);
-    
     ctr_bool ret = false;
     address addr;
     if(ev.error == 0){
@@ -181,17 +185,6 @@ ctr_bool dns_asyn_work_ready::event(dns_asyn_parse_succeed& ev)
         state_ptr<dns_asyn_work>()->parse_callback(addr);
     }
     return ret;
-}
-
-ctr_bool dns_asyn_work_doing::event(state_event& ev)
-{
-    return true;
-}
-
-ctr_bool dns_asyn_work_doing::event(dns_asyn_parse_start& ev)
-{
-    event_base_dispatch(state_ptr<dns_asyn_work>()->ev_base);
-    return true;
 }
 
 CTR_NAMESPACE_END
