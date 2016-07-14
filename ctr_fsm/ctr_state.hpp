@@ -17,13 +17,8 @@ class state_nil;
 class state_event;
 class state_machine;
 
-#define state_next(state) \
-public:                   \
-typedef state next_type
-
-#define state_entry(state) \
-public:                    \
-typedef state entry_type
+#define state_entry(state) public: typedef state entry_type
+#define state_order(state) public: typedef state order_type
 
 // 状态基类
 class state_base
@@ -33,10 +28,10 @@ public:
     state_base(void):owner_(NULL){}
     virtual ~state_base(void){}
     
-    // 顺序状态
-    state_next(state_nil);
-    // 子状态
+    // 进入状态
     state_entry(state_nil);
+    // 顺序状态
+    state_order(state_nil);
     
     // 进入状态
     virtual void enter(void){}

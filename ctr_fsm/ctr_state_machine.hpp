@@ -54,8 +54,6 @@ public:
         type1* state1 = _get_state<type1>();
         if(state1 != NULL){
             _transition<type1, type2>();
-        }else{
-            _alloc_state<type2>();
         }
     }
     // 发送事件到状态机
@@ -68,19 +66,19 @@ public:
             if(state_event_type::is_refresh<event>()){
                 ret = state1->event(ev);
                 if(state1->is_finish()){
-                    _transition<typename event::state1_type, typename event::state1_type::next_type>();
+                    _transition<typename event::state1_type, typename event::state1_type::order_type>();
                 }
             }else if(state_event_type::is_transition<event>()){
                 ret = state1->event(ev);
                 if(state1->is_finish()){
-                    _transition<typename event::state1_type, typename event::state1_type::next_type>();
+                    _transition<typename event::state1_type, typename event::state1_type::order_type>();
                 }else if(ret){
                     _transition<typename event::state1_type, typename event::state2_type>();
                     typename event::state2_type* state2 = _get_state<typename event::state2_type>();
                     if(state2 != NULL){
                         ret = state2->event(ev);
                         if(state2->is_finish()){
-                            _transition<typename event::state2_type, typename event::state2_type::next_type>();
+                            _transition<typename event::state2_type, typename event::state2_type::order_type>();
                         }
                     }
                 }
@@ -104,7 +102,7 @@ private:
             the_state->enter();
             state_list_.push_back(the_state);
             if(the_state->is_finish()){
-                _transition<type, typename type::next_type>();
+                _transition<type, typename type::order_type>();
             }else{
                 if(!state_type::is_equal<typename type::entry_type, state_nil>()){
                     _alloc_state<typename type::entry_type>();
@@ -120,15 +118,20 @@ private:
             state_base* the_state = state_list_.back();
             ctr_bool is_stop = (state_type::is_equal<type>(*the_state) ||
                                 state_type::is_equal<state_nil>(*the_state));
-            the_state->exit();
-            state_list_.pop_back();
-            ctr_bool is_finish = the_state->is_finish();
-            if(is_finish){
-                the_state->finished();
-            }
-            delete the_state;
-            if(!is_finish && !is_stop){
-                _delete_state<type>();
+            if(the_state->is_finish()){
+                state_list_.pop_back();
+                delete the_state;
+            }else{
+                the_state->exit();
+                if(the_state->is_finish()){
+                    the_state->finished();
+                }else{
+                    state_list_.pop_back();
+                    delete the_state;
+                    if(!is_stop){
+                        _delete_state<type>();
+                    }
+                }
             }
         }
     }
@@ -163,7 +166,7 @@ template<typename self, typename super>
 void state<self, super>::finished()
 {
     if(owner_ != NULL){
-        owner_->transition<self, typename self::next_type>();
+        owner_->transition<self, typename self::order_type>();
     }
 }
 
