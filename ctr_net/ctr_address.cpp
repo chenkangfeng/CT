@@ -83,6 +83,11 @@ void address::init(evutil_addrinfo* addr)
     }
 }
 
+void address::clear(void)
+{
+    addr_vec_.clear();
+}
+
 ctr_int32 address::size(void)
 {
     return (ctr_int32)addr_vec_.size();

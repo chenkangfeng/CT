@@ -51,6 +51,8 @@ public:
     
     // 初始化地址集合
     void init(evutil_addrinfo* addr);
+    // 清理地址集合
+    void clear(void);
     // 地址集合数量
     ctr_int32 size(void);
     // 获取地址集合中的地址

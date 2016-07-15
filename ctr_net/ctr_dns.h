@@ -23,119 +23,32 @@ public:
     virtual ~dns(void);
     
     // 同步DNS解析
-    ctr_bool parse(ctr_strptr domain, address& addr);
-    // 设置超时事件和回掉函数
+    static ctr_bool parse(ctr_strptr domain, address& addr);
+    // 设置超时时间和回掉函数
     void set_timeout(const timeval& time, const std::function<void(void)>& callback);
+    // 设置错误回掉函数
+    void set_error(const std::function<void(void)>& callback);
     // 异步DNS解析
     ctr_bool asyn_parse(ctr_strptr domain, const std::function<void(address&)>& callback);
+    // 异步DNS解析回掉
+    void asyn_parse_callback(evutil_addrinfo* result);
 private:
-    // 异步解析状态机
-    state_machine machine_;
-};
-
-class dns_asyn;
-class dns_asyn_wait;
-class dns_asyn_work;
-class dns_asyn_work_ready;
-class dns_asyn_work_doing;
-
-// DNS异步解析初始化事件
-class dns_asyn_init : public state_refresh<dns_asyn>
-{
-public:
-    state_machine* machine;
-};
-
-// DNS异步解析设置超时事件
-class dns_set_timeout : public state_refresh<dns_asyn>
-{
-public:
-    dns_set_timeout(const std::function<void(void)>& callback):
-    timeout_callback(callback){}
+    // 初始化域名
+    static void _init_domain(ctr_strptr& domain, evutil_addrinfo& hints);
+    // 异步DNS解析过程
+    void _asyn_parse_process(ctr_strptr domain);
     
-    timeval time;
-    const std::function<void(void)>& timeout_callback;
-};
-
-// DNS异步解析进入准备事件
-class dns_asyn_parse_ready : public state_transition<dns_asyn_wait, dns_asyn_work>
-{
-public:
-    dns_asyn_parse_ready(const std::function<void(address&)>& callback):
-    parse_callback(callback){}
-    
-    ctr_strptr domain;
-    const std::function<void(address&)>& parse_callback;
-};
-
-// DNS异步解析开始解析事件
-class dns_asyn_parse_start : public state_transition<dns_asyn_work_ready, dns_asyn_work_doing>{};
-
-// DNS异步解析超时事件
-class dns_asyn_parse_timeout : public state_refresh<dns_asyn_work_doing>{};
-
-// DNS异步解析成功事件
-class dns_asyn_parse_succeed : public state_refresh<dns_asyn_work_doing>
-{
-public:
-    ctr_int32 error;
-    evutil_addrinfo* result;
-};
-
-// DNS异步解析基状态
-class dns_asyn : public state<dns_asyn, state_nil>
-{
-public:
-    state_entry(dns_asyn_wait);
-    
-    dns_asyn(void);
-    
-    ctr_bool event(dns_asyn_init& ev);
-    ctr_bool event(dns_set_timeout& ev);
-    
-    state_machine* machine;
-    
-    timeval time;
-    std::function<void(void)> timeout_callback;
-};
-
-// DNS异步解析等待状态
-class dns_asyn_wait : public state<dns_asyn_wait, dns_asyn>{};
-
-// DNS异步解析工作状态
-class dns_asyn_work : public state<dns_asyn_work, dns_asyn>
-{
-public:
-    state_entry(dns_asyn_work_ready);
-    
-    virtual void enter(void);
-    virtual void exit(void);
-    
-    ctr_bool event(dns_asyn_parse_ready& ev);
-    
-    struct event_base* ev_base;
-    struct evdns_base* ev_dns_base;
-    struct event* ev;
-    
-    std::function<void(address&)> parse_callback;
-};
-
-// DNS异步解析装备状态
-class dns_asyn_work_ready : public state<dns_asyn_work_ready, dns_asyn_work>{};
-
-// DNS异步解析执行状态
-class dns_asyn_work_doing : public state<dns_asyn_work_doing, dns_asyn_work>
-{
-public:
-    state_next(dns_asyn_work_ready);
-    
-    virtual void exit(void);
-    
-    ctr_bool event(dns_asyn_parse_start& ev);
-    ctr_bool event(dns_asyn_parse_timeout& ev);
-    ctr_bool event(dns_asyn_parse_succeed& ev);
+    timeval time_;
+    std::function<void(void)> timeout_callback_;
+    std::function<void(void)> error_callback_;
+    std::function<void(address&)> parse_callback_;
     
     std::thread thread_;
+    
+    address addr_;
+    
+    event_base* ev_base_;
+    evdns_base* ev_dns_base_;
 };
 
 CTR_NAMESPACE_END
